@@ -1,1 +1,121 @@
-さくら
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stylish Maze Game</title>
+<style>
+body{
+  margin:0;
+  font-family: "Segoe UI", sans-serif;
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+  color:white;
+}
+
+#game{
+  display:grid;
+  grid-template-columns: repeat(10,40px);
+  grid-template-rows: repeat(10,40px);
+  gap:4px;
+}
+
+.cell{
+  width:40px;
+  height:40px;
+  border-radius:8px;
+  background:rgba(255,255,255,0.1);
+}
+
+.wall{
+  background:rgba(255,255,255,0.8);
+}
+
+.player{
+  background:#00e5ff;
+}
+
+.goal{
+  background:#00ff9c;
+}
+
+#title{
+  position:absolute;
+  top:30px;
+  font-size:28px;
+  letter-spacing:2px;
+}
+</style>
+</head>
+<body>
+<div id="title">MAZE GAME</div>
+<div id="game"></div>
+
+<script>
+const maze=[
+[0,1,0,0,0,0,0,1,0,0],
+[0,1,0,1,1,1,0,1,0,1],
+[0,0,0,1,0,0,0,0,0,1],
+[1,1,0,1,0,1,1,1,0,1],
+[0,0,0,0,0,1,0,0,0,0],
+[0,1,1,1,0,1,0,1,1,0],
+[0,1,0,0,0,0,0,1,0,0],
+[0,1,0,1,1,1,0,1,0,1],
+[0,0,0,0,0,1,0,0,0,1],
+[1,1,1,1,0,0,0,1,0,0]
+];
+
+let player={x:0,y:0};
+const goal={x:9,y:9};
+
+const game=document.getElementById("game");
+
+function draw(){
+  game.innerHTML="";
+
+  for(let y=0;y<10;y++){
+    for(let x=0;x<10;x++){
+      const cell=document.createElement("div");
+      cell.classList.add("cell");
+
+      if(maze[y][x]===1) cell.classList.add("wall");
+      if(player.x===x && player.y===y) cell.classList.add("player");
+      if(goal.x===x && goal.y===y) cell.classList.add("goal");
+
+      game.appendChild(cell);
+    }
+  }
+}
+
+function move(dx,dy){
+  const nx=player.x+dx;
+  const ny=player.y+dy;
+
+  if(nx<0||ny<0||nx>=10||ny>=10) return;
+  if(maze[ny][nx]===1) return;
+
+  player.x=nx;
+  player.y=ny;
+
+  if(player.x===goal.x && player.y===goal.y){
+    setTimeout(()=>alert("GOAL! 🎉"),100);
+  }
+
+  draw();
+}
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowUp") move(0,-1);
+  if(e.key==="ArrowDown") move(0,1);
+  if(e.key==="ArrowLeft") move(-1,0);
+  if(e.key==="ArrowRight") move(1,0);
+});
+
+draw();
+</script>
+</body>
+</html>
+
