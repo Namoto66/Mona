@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Retro Time Attack Maze</title>
+<title>Night Library Escape</title>
 <style>
 body{
   margin:0;
-  background:#0a0a0a;
-  color:#33ff99;
+  background:#0b0b12;
+  color:#d6d6ff;
   font-family:"Courier New",monospace;
   display:flex;
   flex-direction:column;
@@ -17,173 +17,188 @@ body{
   height:100vh;
 }
 
-#title{
-  font-size:30px;
-  margin-bottom:10px;
-  text-shadow:0 0 8px #33ff99;
-}
+#title{font-size:28px;margin-bottom:8px}
 
-#timer{
-  margin-bottom:15px;
+#story{
+  font-size:14px;
+  margin-bottom:12px;
+  max-width:500px;
+  text-align:center;
+  opacity:0.9;
 }
 
 #game{
   display:grid;
-  grid-template-columns:repeat(15,30px);
-  grid-template-rows:repeat(15,30px);
+  grid-template-columns:repeat(12,32px);
+  grid-template-rows:repeat(12,32px);
   gap:2px;
 }
 
-.cell{
-  width:30px;
-  height:30px;
-  background:#111;
+.cell{width:32px;height:32px;background:#111;border-radius:3px}
+.wall{background:#444}
+.player{background:#7afcff}
+.shelf{background:#9b7bff}
+.door{background:#ffd166}
+.key{background:#7cff7c}
+
+#message{
+  margin-top:10px;
+  min-height:20px;
+  font-size:14px;
 }
 
-.wall{ background:#33ff99; }
-.player{ background:#00e5ff; }
-.goal{ background:#ffff66; }
-.enemy{ background:#ff3366; }
-
 button{
-  margin-top:15px;
-  padding:6px 14px;
-  background:black;
-  color:#33ff99;
-  border:1px solid #33ff99;
+  margin-top:10px;
+  background:#111;
+  border:1px solid #aaa;
+  color:white;
+  padding:6px 12px;
   cursor:pointer;
 }
 </style>
 </head>
 <body>
 
-<div id="title">RETRO MAZE ESCAPE</div>
-<div id="timer">Time: 0.00</div>
+<div id="title">Night Library Escape</div>
+<div id="story">放課後、図書館で本を読んでいると…いつの間にか電気が消えていました。ドアは閉まっています。本棚を調べて、鍵を見つけて脱出しましょう。</div>
+
 <div id="game"></div>
-<button onclick="startGame()">RESTART</button>
+<div id="message"></div>
+<button onclick="startGame()">Restart</button>
 
 <script>
-const size=15;
-let maze=[];
-let player={x:0,y:0};
-let goal={x:size-1,y:size-1};
-let enemy={x:7,y:7};
+const size=12
+let maze=[]
+let player={x:1,y:1}
+let key={x:0,y:0}
+let door={x:size-2,y:size-2}
+let hasKey=false
 
-const game=document.getElementById("game");
-const timerText=document.getElementById("timer");
+const game=document.getElementById("game")
+const message=document.getElementById("message")
 
-let startTime;
-let finished=false;
+/* -------- sound system -------- */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
 
-function randomMaze(){
-  maze=[];
-  for(let y=0;y<size;y++){
-    let row=[];
-    for(let x=0;x<size;x++){
-      if(Math.random()<0.25 && !(x==0&&y==0) && !(x==goal.x&&y==goal.y)){
-        row.push(1);
-      }else{
-        row.push(0);
-      }
-    }
-    maze.push(row);
-  }
+function playSound(freq,duration,type="sine"){
+ const osc=audioCtx.createOscillator()
+ const gain=audioCtx.createGain()
+ osc.type=type
+ osc.frequency.value=freq
+ osc.connect(gain)
+ gain.connect(audioCtx.destination)
+
+ gain.gain.setValueAtTime(0.1,audioCtx.currentTime)
+ osc.start()
+ osc.stop(audioCtx.currentTime+duration)
 }
 
+function stepSound(){playSound(220,0.05,"square")}
+function keySound(){playSound(880,0.15,"triangle")}
+function shelfSound(){playSound(140,0.12,"sawtooth")}
+function doorSound(){playSound(520,0.25,"triangle")}
+
+/* -------- map generation -------- */
+function randomMap(){
+ maze=[]
+ for(let y=0;y<size;y++){
+  let row=[]
+  for(let x=0;x<size;x++){
+   if(x===0||y===0||x===size-1||y===size-1) row.push(1)
+   else if(Math.random()<0.18) row.push(2)
+   else row.push(0)
+  }
+  maze.push(row)
+ }
+}
+
+function placeKey(){
+ while(true){
+  let x=Math.floor(Math.random()*size)
+  let y=Math.floor(Math.random()*size)
+  if(maze[y][x]===0 && !(x===player.x&&y===player.y)){
+   key={x,y}
+   break
+  }
+ }
+}
+
+/* -------- drawing -------- */
 function draw(){
-  game.innerHTML="";
-  for(let y=0;y<size;y++){
-    for(let x=0;x<size;x++){
-      const cell=document.createElement("div");
-      cell.classList.add("cell");
+ game.innerHTML=""
 
-      if(maze[y][x]===1) cell.classList.add("wall");
-      if(player.x===x && player.y===y) cell.classList.add("player");
-      if(goal.x===x && goal.y===y) cell.classList.add("goal");
-      if(enemy.x===x && enemy.y===y) cell.classList.add("enemy");
+ for(let y=0;y<size;y++){
+  for(let x=0;x<size;x++){
+   const cell=document.createElement("div")
+   cell.classList.add("cell")
 
-      game.appendChild(cell);
-    }
+   if(maze[y][x]===1) cell.classList.add("wall")
+   if(maze[y][x]===2) cell.classList.add("shelf")
+
+   if(player.x===x&&player.y===y) cell.classList.add("player")
+   if(key.x===x&&key.y===y&&!hasKey) cell.classList.add("key")
+   if(door.x===x&&door.y===y) cell.classList.add("door")
+
+   game.appendChild(cell)
   }
+ }
 }
 
-function movePlayer(dx,dy){
-  if(finished) return;
+/* -------- movement -------- */
+function move(dx,dy){
+ const nx=player.x+dx
+ const ny=player.y+dy
 
-  const nx=player.x+dx;
-  const ny=player.y+dy;
+ if(maze[ny][nx]===1) return
 
-  if(nx<0||ny<0||nx>=size||ny>=size) return;
-  if(maze[ny][nx]===1) return;
+ player.x=nx
+ player.y=ny
+ stepSound()
 
-  player.x=nx;
-  player.y=ny;
+ if(maze[ny][nx]===2){
+  shelfSound()
+  message.textContent="本棚を調べた…古い本しかない。"
+ }
 
-  checkGame();
-  draw();
-}
+ if(nx===key.x&&ny===key.y&&!hasKey){
+  hasKey=true
+  keySound()
+  message.textContent="鍵を見つけた！出口を探そう。"
+ }
 
-function moveEnemy(){
-  if(finished) return;
-
-  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
-  const d=dirs[Math.floor(Math.random()*dirs.length)];
-
-  const nx=enemy.x+d[0];
-  const ny=enemy.y+d[1];
-
-  if(nx<0||ny<0||nx>=size||ny>=size) return;
-  if(maze[ny][nx]===1) return;
-
-  enemy.x=nx;
-  enemy.y=ny;
-
-  checkGame();
-  draw();
-}
-
-function checkGame(){
-  if(player.x===enemy.x && player.y===enemy.y){
-    finished=true;
-    setTimeout(()=>alert("Caught by enemy! Game Over"),50);
+ if(nx===door.x&&ny===door.y){
+  if(hasKey){
+   doorSound()
+   message.textContent="鍵でドアを開けた。外に出られた！クリア！"
+  }else{
+   message.textContent="ドアは鍵がかかっている。"
   }
+ }
 
-  if(player.x===goal.x && player.y===goal.y){
-    finished=true;
-    const t=((Date.now()-startTime)/1000).toFixed(2);
-    setTimeout(()=>alert("GOAL! Time: "+t+" seconds"),50);
-  }
+ draw()
 }
 
-function updateTimer(){
-  if(finished) return;
-  const t=(Date.now()-startTime)/1000;
-  timerText.textContent="Time: "+t.toFixed(2);
-}
+/* -------- controls -------- */
+document.addEventListener("keydown",e=>{
+ if(e.key==="ArrowUp") move(0,-1)
+ if(e.key==="ArrowDown") move(0,1)
+ if(e.key==="ArrowLeft") move(-1,0)
+ if(e.key==="ArrowRight") move(1,0)
+})
 
 function startGame(){
-  randomMaze();
-  player={x:0,y:0};
-  enemy={x:Math.floor(size/2),y:Math.floor(size/2)};
-  finished=false;
-  startTime=Date.now();
-  draw();
+ player={x:1,y:1}
+ door={x:size-2,y:size-2}
+ hasKey=false
+ message.textContent=""
+ randomMap()
+ placeKey()
+ draw()
 }
 
-setInterval(updateTimer,50);
-setInterval(moveEnemy,400);
-
-document.addEventListener("keydown",e=>{
-  if(e.key==="ArrowUp") movePlayer(0,-1);
-  if(e.key==="ArrowDown") movePlayer(0,1);
-  if(e.key==="ArrowLeft") movePlayer(-1,0);
-  if(e.key==="ArrowRight") movePlayer(1,0);
-});
-
-startGame();
+startGame()
 </script>
 
 </body>
 </html>
-
 
