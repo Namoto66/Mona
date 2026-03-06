@@ -3,119 +3,188 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stylish Maze Game</title>
+<title>Retro Time Attack Maze</title>
 <style>
 body{
   margin:0;
-  font-family: "Segoe UI", sans-serif;
-  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  background:#0a0a0a;
+  color:#33ff99;
+  font-family:"Courier New",monospace;
   display:flex;
+  flex-direction:column;
   align-items:center;
   justify-content:center;
   height:100vh;
-  color:white;
+}
+
+#title{
+  font-size:30px;
+  margin-bottom:10px;
+  text-shadow:0 0 8px #33ff99;
+}
+
+#timer{
+  margin-bottom:15px;
 }
 
 #game{
   display:grid;
-  grid-template-columns: repeat(10,40px);
-  grid-template-rows: repeat(10,40px);
-  gap:4px;
+  grid-template-columns:repeat(15,30px);
+  grid-template-rows:repeat(15,30px);
+  gap:2px;
 }
 
 .cell{
-  width:40px;
-  height:40px;
-  border-radius:8px;
-  background:rgba(255,255,255,0.1);
+  width:30px;
+  height:30px;
+  background:#111;
 }
 
-.wall{
-  background:rgba(255,255,255,0.8);
-}
+.wall{ background:#33ff99; }
+.player{ background:#00e5ff; }
+.goal{ background:#ffff66; }
+.enemy{ background:#ff3366; }
 
-.player{
-  background:#00e5ff;
-}
-
-.goal{
-  background:#00ff9c;
-}
-
-#title{
-  position:absolute;
-  top:30px;
-  font-size:28px;
-  letter-spacing:2px;
+button{
+  margin-top:15px;
+  padding:6px 14px;
+  background:black;
+  color:#33ff99;
+  border:1px solid #33ff99;
+  cursor:pointer;
 }
 </style>
 </head>
 <body>
-<div id="title">MAZE GAME</div>
+
+<div id="title">RETRO MAZE ESCAPE</div>
+<div id="timer">Time: 0.00</div>
 <div id="game"></div>
+<button onclick="startGame()">RESTART</button>
 
 <script>
-const maze=[
-[0,1,0,0,0,0,0,1,0,0],
-[0,1,0,1,1,1,0,1,0,1],
-[0,0,0,1,0,0,0,0,0,1],
-[1,1,0,1,0,1,1,1,0,1],
-[0,0,0,0,0,1,0,0,0,0],
-[0,1,1,1,0,1,0,1,1,0],
-[0,1,0,0,0,0,0,1,0,0],
-[0,1,0,1,1,1,0,1,0,1],
-[0,0,0,0,0,1,0,0,0,1],
-[1,1,1,1,0,0,0,1,0,0]
-];
-
+const size=15;
+let maze=[];
 let player={x:0,y:0};
-const goal={x:9,y:9};
+let goal={x:size-1,y:size-1};
+let enemy={x:7,y:7};
 
 const game=document.getElementById("game");
+const timerText=document.getElementById("timer");
+
+let startTime;
+let finished=false;
+
+function randomMaze(){
+  maze=[];
+  for(let y=0;y<size;y++){
+    let row=[];
+    for(let x=0;x<size;x++){
+      if(Math.random()<0.25 && !(x==0&&y==0) && !(x==goal.x&&y==goal.y)){
+        row.push(1);
+      }else{
+        row.push(0);
+      }
+    }
+    maze.push(row);
+  }
+}
 
 function draw(){
   game.innerHTML="";
-
-  for(let y=0;y<10;y++){
-    for(let x=0;x<10;x++){
+  for(let y=0;y<size;y++){
+    for(let x=0;x<size;x++){
       const cell=document.createElement("div");
       cell.classList.add("cell");
 
       if(maze[y][x]===1) cell.classList.add("wall");
       if(player.x===x && player.y===y) cell.classList.add("player");
       if(goal.x===x && goal.y===y) cell.classList.add("goal");
+      if(enemy.x===x && enemy.y===y) cell.classList.add("enemy");
 
       game.appendChild(cell);
     }
   }
 }
 
-function move(dx,dy){
+function movePlayer(dx,dy){
+  if(finished) return;
+
   const nx=player.x+dx;
   const ny=player.y+dy;
 
-  if(nx<0||ny<0||nx>=10||ny>=10) return;
+  if(nx<0||ny<0||nx>=size||ny>=size) return;
   if(maze[ny][nx]===1) return;
 
   player.x=nx;
   player.y=ny;
 
-  if(player.x===goal.x && player.y===goal.y){
-    setTimeout(()=>alert("GOAL! 🎉"),100);
-  }
-
+  checkGame();
   draw();
 }
 
+function moveEnemy(){
+  if(finished) return;
+
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  const d=dirs[Math.floor(Math.random()*dirs.length)];
+
+  const nx=enemy.x+d[0];
+  const ny=enemy.y+d[1];
+
+  if(nx<0||ny<0||nx>=size||ny>=size) return;
+  if(maze[ny][nx]===1) return;
+
+  enemy.x=nx;
+  enemy.y=ny;
+
+  checkGame();
+  draw();
+}
+
+function checkGame(){
+  if(player.x===enemy.x && player.y===enemy.y){
+    finished=true;
+    setTimeout(()=>alert("Caught by enemy! Game Over"),50);
+  }
+
+  if(player.x===goal.x && player.y===goal.y){
+    finished=true;
+    const t=((Date.now()-startTime)/1000).toFixed(2);
+    setTimeout(()=>alert("GOAL! Time: "+t+" seconds"),50);
+  }
+}
+
+function updateTimer(){
+  if(finished) return;
+  const t=(Date.now()-startTime)/1000;
+  timerText.textContent="Time: "+t.toFixed(2);
+}
+
+function startGame(){
+  randomMaze();
+  player={x:0,y:0};
+  enemy={x:Math.floor(size/2),y:Math.floor(size/2)};
+  finished=false;
+  startTime=Date.now();
+  draw();
+}
+
+setInterval(updateTimer,50);
+setInterval(moveEnemy,400);
+
 document.addEventListener("keydown",e=>{
-  if(e.key==="ArrowUp") move(0,-1);
-  if(e.key==="ArrowDown") move(0,1);
-  if(e.key==="ArrowLeft") move(-1,0);
-  if(e.key==="ArrowRight") move(1,0);
+  if(e.key==="ArrowUp") movePlayer(0,-1);
+  if(e.key==="ArrowDown") movePlayer(0,1);
+  if(e.key==="ArrowLeft") movePlayer(-1,0);
+  if(e.key==="ArrowRight") movePlayer(1,0);
 });
 
-draw();
+startGame();
 </script>
+
 </body>
 </html>
+
+
 
