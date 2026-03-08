@@ -1,204 +1,120 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Night Library Escape</title>
+<title>射的ゲーム</title>
+
 <style>
 body{
-  margin:0;
-  background:#0b0b12;
-  color:#d6d6ff;
-  font-family:"Courier New",monospace;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  height:100vh;
+text-align:center;
+background:#111;
+color:white;
+font-family:sans-serif;
 }
 
-#title{font-size:28px;margin-bottom:8px}
-
-#story{
-  font-size:14px;
-  margin-bottom:12px;
-  max-width:500px;
-  text-align:center;
-  opacity:0.9;
-}
-
-#game{
-  display:grid;
-  grid-template-columns:repeat(12,32px);
-  grid-template-rows:repeat(12,32px);
-  gap:2px;
-}
-
-.cell{width:32px;height:32px;background:#111;border-radius:3px}
-.wall{background:#444}
-.player{background:#7afcff}
-.shelf{background:#9b7bff}
-.door{background:#ffd166}
-.key{background:#7cff7c}
-
-#message{
-  margin-top:10px;
-  min-height:20px;
-  font-size:14px;
-}
-
-button{
-  margin-top:10px;
-  background:#111;
-  border:1px solid #aaa;
-  color:white;
-  padding:6px 12px;
-  cursor:pointer;
+canvas{
+background:#222;
+border:3px solid white;
+cursor:crosshair;
 }
 </style>
+
 </head>
+
 <body>
 
-<div id="title">Night Library Escape</div>
-<div id="story">放課後、図書館で本を読んでいると…いつの間にか電気が消えていました。ドアは閉まっています。本棚を調べて、鍵を見つけて脱出しましょう。</div>
+<h1>🎯 射的ゲーム</h1>
+<p>マウスで狙ってクリック！</p>
+<p>スコア: <span id="score">0</span></p>
 
-<div id="game"></div>
-<div id="message"></div>
-<button onclick="startGame()">Restart</button>
+<canvas id="game" width="600" height="400"></canvas>
 
 <script>
-const size=12
-let maze=[]
-let player={x:1,y:1}
-let key={x:0,y:0}
-let door={x:size-2,y:size-2}
-let hasKey=false
 
-const game=document.getElementById("game")
-const message=document.getElementById("message")
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-/* -------- sound system -------- */
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+let score = 0;
 
-function playSound(freq,duration,type="sine"){
- const osc=audioCtx.createOscillator()
- const gain=audioCtx.createGain()
- osc.type=type
- osc.frequency.value=freq
- osc.connect(gain)
- gain.connect(audioCtx.destination)
+let target = {
+x:100,
+y:200,
+size:35,
+dx:3
+};
 
- gain.gain.setValueAtTime(0.1,audioCtx.currentTime)
- osc.start()
- osc.stop(audioCtx.currentTime+duration)
+const shotSound = new Audio("https://actions.google.com/sounds/v1/impacts/wood_plank_flicks.ogg");
+const hitSound = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+
+function drawTarget(){
+
+ctx.beginPath();
+ctx.arc(target.x,target.y,target.size,0,Math.PI*2);
+ctx.fillStyle="red";
+ctx.fill();
+
+ctx.beginPath();
+ctx.arc(target.x,target.y,target.size/2,0,Math.PI*2);
+ctx.fillStyle="white";
+ctx.fill();
+
+ctx.beginPath();
+ctx.arc(target.x,target.y,target.size/4,0,Math.PI*2);
+ctx.fillStyle="red";
+ctx.fill();
+
 }
 
-function stepSound(){playSound(220,0.05,"square")}
-function keySound(){playSound(880,0.15,"triangle")}
-function shelfSound(){playSound(140,0.12,"sawtooth")}
-function doorSound(){playSound(520,0.25,"triangle")}
+function update(){
 
-/* -------- map generation -------- */
-function randomMap(){
- maze=[]
- for(let y=0;y<size;y++){
-  let row=[]
-  for(let x=0;x<size;x++){
-   if(x===0||y===0||x===size-1||y===size-1) row.push(1)
-   else if(Math.random()<0.18) row.push(2)
-   else row.push(0)
-  }
-  maze.push(row)
- }
+ctx.clearRect(0,0,600,400);
+
+target.x += target.dx;
+
+if(target.x > 560 || target.x < 40){
+target.dx *= -1;
 }
 
-function placeKey(){
- while(true){
-  let x=Math.floor(Math.random()*size)
-  let y=Math.floor(Math.random()*size)
-  if(maze[y][x]===0 && !(x===player.x&&y===player.y)){
-   key={x,y}
-   break
-  }
- }
+drawTarget();
+
+requestAnimationFrame(update);
+
 }
 
-/* -------- drawing -------- */
-function draw(){
- game.innerHTML=""
+canvas.addEventListener("click", function(e){
 
- for(let y=0;y<size;y++){
-  for(let x=0;x<size;x++){
-   const cell=document.createElement("div")
-   cell.classList.add("cell")
+shotSound.currentTime = 0;
+shotSound.play();
 
-   if(maze[y][x]===1) cell.classList.add("wall")
-   if(maze[y][x]===2) cell.classList.add("shelf")
+let rect = canvas.getBoundingClientRect();
 
-   if(player.x===x&&player.y===y) cell.classList.add("player")
-   if(key.x===x&&key.y===y&&!hasKey) cell.classList.add("key")
-   if(door.x===x&&door.y===y) cell.classList.add("door")
+let mouseX = e.clientX - rect.left;
+let mouseY = e.clientY - rect.top;
 
-   game.appendChild(cell)
-  }
- }
+let distance = Math.sqrt(
+(mouseX-target.x)**2 +
+(mouseY-target.y)**2
+);
+
+if(distance < target.size){
+
+hitSound.currentTime = 0;
+hitSound.play();
+
+score += 10;
+
+document.getElementById("score").textContent = score;
+
+target.x = Math.random()*500+50;
+target.y = Math.random()*300+50;
+
 }
 
-/* -------- movement -------- */
-function move(dx,dy){
- const nx=player.x+dx
- const ny=player.y+dy
+});
 
- if(maze[ny][nx]===1) return
+update();
 
- player.x=nx
- player.y=ny
- stepSound()
-
- if(maze[ny][nx]===2){
-  shelfSound()
-  message.textContent="本棚を調べた…古い本しかない。"
- }
-
- if(nx===key.x&&ny===key.y&&!hasKey){
-  hasKey=true
-  keySound()
-  message.textContent="鍵を見つけた！出口を探そう。"
- }
-
- if(nx===door.x&&ny===door.y){
-  if(hasKey){
-   doorSound()
-   message.textContent="鍵でドアを開けた。外に出られた！クリア！"
-  }else{
-   message.textContent="ドアは鍵がかかっている。"
-  }
- }
-
- draw()
-}
-
-/* -------- controls -------- */
-document.addEventListener("keydown",e=>{
- if(e.key==="ArrowUp") move(0,-1)
- if(e.key==="ArrowDown") move(0,1)
- if(e.key==="ArrowLeft") move(-1,0)
- if(e.key==="ArrowRight") move(1,0)
-})
-
-function startGame(){
- player={x:1,y:1}
- door={x:size-2,y:size-2}
- hasKey=false
- message.textContent=""
- randomMap()
- placeKey()
- draw()
-}
-
-startGame()
 </script>
 
 </body>
 </html>
-
