@@ -2,190 +2,138 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Animal Hunter Carnival</title>
+<title>勇者の大冒険 ～失われた世界～</title>
 
 <style>
-
 body{
-margin:0;
-background:#0f1720;
+background:black;
 color:white;
-font-family:Arial;
 text-align:center;
+font-family:sans-serif;
 }
 
 canvas{
-border:4px solid white;
-cursor:none;
+background:#222;
+border:3px solid white;
 }
 
 #ui{
-padding:10px;
-font-size:18px;
+margin-top:10px;
 }
-
-button{
-padding:8px 16px;
-margin:5px;
-font-size:16px;
-}
-
 </style>
 </head>
 
 <body>
 
-<h1>🦊 Animal Hunter Carnival</h1>
+<h1>勇者の大冒険<br>～失われた世界～</h1>
 
-<div id="ui">
-Score: <span id="score">0</span>
-|
-Level: <span id="level">1</span>
-|
-Weapon: <span id="weapon">Rifle</span>
-|
-Achievements: <span id="ach">0</span>
+<div id="start">
+
+<p>勇者の名前を入力してください</p>
+
+<input id="nameInput">
+<button onclick="startGame()">冒険を始める</button>
+
 </div>
 
-<canvas id="game" width="900" height="500"></canvas>
+<canvas id="game" width="800" height="500" style="display:none"></canvas>
 
-<br>
-
-<button onclick="startGame()">Start</button>
-<button onclick="setWeapon('rifle')">Rifle</button>
-<button onclick="setWeapon('shotgun')">Shotgun</button>
-<button onclick="setWeapon('sniper')">Sniper</button>
+<div id="ui"></div>
 
 <script>
 
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
+const canvas=document.getElementById("game")
+const ctx=canvas.getContext("2d")
+const ui=document.getElementById("ui")
 
-let score=0;
-let level=1;
-let animals=[];
-let trees=[];
-let weapon="rifle";
-let mouseX=0;
-let mouseY=0;
-
-let achievements=0;
-
-const shotSound=new Audio("https://actions.google.com/sounds/v1/impacts/wood_plank_flicks.ogg");
-const hitSound=new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
+let heroName="勇者"
 
 function startGame(){
 
-score=0;
-level=1;
-animals=[];
-trees=[];
+heroName=document.getElementById("nameInput").value
 
-spawnTrees();
-spawnAnimals();
+if(heroName=="") heroName="勇者"
 
-}
+document.getElementById("start").style.display="none"
+canvas.style.display="block"
 
-function setWeapon(w){
-
-weapon=w;
-document.getElementById("weapon").textContent=w;
+state="village"
 
 }
 
-function spawnTrees(){
+let state="title"
 
-for(let i=0;i<5;i++){
-
-trees.push({
-x:Math.random()*800+50,
-y:Math.random()*400+50
-})
-
+let player={
+x:380,
+y:250,
+hp:60,
+atk:10,
+level:1
 }
 
+let party=[heroName]
+
+let enemy=null
+
+let villagers=[
+{x:200,y:200,text:"魔王ヴォルカが世界を支配してしまった…"},
+{x:500,y:220,text:"森には宝箱があるらしいぞ"}
+]
+
+let chest={
+x:400,
+y:350,
+opened:false
 }
 
-function spawnAnimals(){
+document.addEventListener("keydown",key)
 
-for(let i=0;i<5+level;i++){
+function key(e){
 
-animals.push(createAnimal());
+if(state=="village"){
 
-}
+if(e.key=="ArrowUp")player.y-=20
+if(e.key=="ArrowDown")player.y+=20
+if(e.key=="ArrowLeft")player.x-=20
+if(e.key=="ArrowRight")player.x+=20
 
-}
+if(e.key==" "){
 
-function createAnimal(){
+talk()
 
-let types=[
-{emoji:"🐰",speed:2,hp:1,points:10},
-{emoji:"🦊",speed:3,hp:1,points:20},
-{emoji:"🐻",speed:1,hp:3,points:40}
-];
+openChest()
 
-let t=types[Math.floor(Math.random()*types.length)];
-
-return{
-x:Math.random()*800+50,
-y:Math.random()*400+50,
-dx:(Math.random()<0.5?-1:1)*t.speed,
-dy:(Math.random()<0.5?-1:1)*t.speed,
-emoji:t.emoji,
-hp:t.hp,
-points:t.points
 }
 
 }
 
-canvas.addEventListener("mousemove",e=>{
+if(state=="forest"){
 
-let rect=canvas.getBoundingClientRect();
-mouseX=e.clientX-rect.left;
-mouseY=e.clientY-rect.top;
+if(Math.random()<0.2){
 
-});
-
-canvas.addEventListener("click",()=>{
-
-shotSound.play();
-
-let radius=30;
-
-if(weapon==="shotgun") radius=80;
-if(weapon==="sniper") radius=15;
-
-for(let i=animals.length-1;i>=0;i--){
-
-let a=animals[i];
-
-let dist=Math.sqrt(
-(mouseX-a.x)**2+(mouseY-a.y)**2
-);
-
-if(dist<radius){
-
-a.hp--;
-
-hitSound.play();
-
-if(a.hp<=0){
-
-score+=a.points;
-
-animals.splice(i,1);
-
-if(score>level*200){
-
-level++;
-spawnAnimals();
+startBattle()
 
 }
 
-if(score>500 && achievements<1){
-achievements++;
-alert("🏆 Achievement: Hunter!");
 }
+
+if(state=="battle"){
+
+if(e.key=="1")attack()
+if(e.key=="2")magic()
+
+}
+
+}
+
+function talk(){
+
+for(let v of villagers){
+
+if(Math.abs(player.x-v.x)<60 && Math.abs(player.y-v.y)<60){
+
+ui.innerText=v.text
+return
 
 }
 
@@ -193,105 +141,167 @@ alert("🏆 Achievement: Hunter!");
 
 }
 
-document.getElementById("score").textContent=score;
-document.getElementById("level").textContent=level;
-document.getElementById("ach").textContent=achievements;
+function openChest(){
 
-});
+if(!chest.opened &&
+Math.abs(player.x-chest.x)<50 &&
+Math.abs(player.y-chest.y)<50){
 
-function updateAnimals(){
+chest.opened=true
 
-for(let a of animals){
-
-let dx=a.x-mouseX;
-let dy=a.y-mouseY;
-
-if(Math.sqrt(dx*dx+dy*dy)<120){
-
-a.x+=dx*0.05;
-a.y+=dy*0.05;
-
-}else{
-
-a.x+=a.dx;
-a.y+=a.dy;
-
-}
-
-if(a.x<0||a.x>900) a.dx*=-1;
-if(a.y<0||a.y>500) a.dy*=-1;
+ui.innerText="宝箱を開けた！ポーションを手に入れた！"
 
 }
 
 }
 
-function drawTrees(){
+function startBattle(){
 
-ctx.font="40px serif";
+state="battle"
 
-for(let t of trees){
+let r=Math.random()
 
-ctx.fillText("🌲",t.x,t.y);
+if(r<0.25) enemy={name:"スライム",hp:20,atk:4}
+else if(r<0.5) enemy={name:"鬼",hp:30,atk:6}
+else if(r<0.75) enemy={name:"雷鬼",hp:35,atk:7}
+else enemy={name:"ミニドラゴン",hp:45,atk:9}
+
+ui.innerText=enemy.name+" が現れた！"
+
+}
+
+function attack(){
+
+let dmg=player.atk+Math.floor(Math.random()*6)
+
+enemy.hp-=dmg
+
+ui.innerText=heroName+" の攻撃！ "+dmg+"ダメージ！"
+
+enemyTurn()
+
+}
+
+function magic(){
+
+let dmg=15+Math.floor(Math.random()*8)
+
+enemy.hp-=dmg
+
+ui.innerText="ファイア！ "+dmg+"ダメージ！"
+
+enemyTurn()
+
+}
+
+function enemyTurn(){
+
+if(enemy.hp<=0){
+
+ui.innerText=enemy.name+" を倒した！"
+
+if(party.length<3 && Math.random()<0.4){
+
+party.push(enemy.name)
+
+ui.innerText+=" "+enemy.name+" が仲間になった！"
+
+}
+
+state="village"
+return
+
+}
+
+let dmg=enemy.atk+Math.floor(Math.random()*5)
+
+player.hp-=dmg
+
+ui.innerText=enemy.name+" の攻撃！ "+dmg+"ダメージ"
+
+if(player.hp<=0){
+
+state="gameover"
 
 }
 
 }
 
-function drawAnimals(){
+function drawVillage(){
 
-ctx.textAlign="center";
-ctx.textBaseline="middle";
+ctx.fillStyle="green"
+ctx.fillRect(0,0,800,500)
 
-for(let a of animals){
+ctx.fillStyle="white"
+ctx.fillText("始まりの村",20,20)
 
-ctx.font="40px serif";
-ctx.fillText(a.emoji,a.x,a.y);
+ctx.fillStyle="blue"
+ctx.fillRect(player.x,player.y,40,40)
+
+ctx.fillStyle="yellow"
+
+for(let v of villagers){
+
+ctx.fillRect(v.x,v.y,40,40)
+
+}
+
+ctx.fillStyle="orange"
+
+if(!chest.opened){
+
+ctx.fillRect(chest.x,chest.y,40,40)
 
 }
 
 }
 
-function drawCrosshair(){
+function drawBattle(){
 
-ctx.strokeStyle="white";
+ctx.fillStyle="black"
+ctx.fillRect(0,0,800,500)
 
-ctx.beginPath();
-ctx.moveTo(mouseX-15,mouseY);
-ctx.lineTo(mouseX+15,mouseY);
-ctx.stroke();
+ctx.fillStyle="white"
 
-ctx.beginPath();
-ctx.moveTo(mouseX,mouseY-15);
-ctx.lineTo(mouseX,mouseY+15);
-ctx.stroke();
+ctx.font="25px sans-serif"
 
-}
+ctx.fillText(enemy.name+" が現れた！",300,100)
 
-function gameLoop(){
+ctx.fillText("敵HP: "+enemy.hp,350,200)
 
-ctx.clearRect(0,0,900,500);
+ctx.fillText("1 攻撃",300,350)
+ctx.fillText("2 魔法",420,350)
 
-if(level%2===0){
-
-canvas.style.background="#dff2ff";
-
-}else{
-
-canvas.style.background="#1b2b1b";
+ctx.fillText(heroName+" HP:"+player.hp,20,20)
 
 }
 
-updateAnimals();
+function drawGameOver(){
 
-drawTrees();
-drawAnimals();
-drawCrosshair();
+ctx.fillStyle="black"
+ctx.fillRect(0,0,800,500)
 
-requestAnimationFrame(gameLoop);
+ctx.fillStyle="red"
+
+ctx.font="50px sans-serif"
+
+ctx.fillText("GAME OVER",260,250)
 
 }
 
-gameLoop();
+function loop(){
+
+ctx.clearRect(0,0,800,500)
+
+if(state=="village") drawVillage()
+if(state=="battle") drawBattle()
+if(state=="gameover") drawGameOver()
+
+requestAnimationFrame(loop)
+
+}
+
+loop()
 
 </script>
 
