@@ -1,309 +1,77 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>勇者の大冒険 ～失われた世界～</title>
-
-<style>
-body{
-background:black;
-color:white;
-text-align:center;
-font-family:sans-serif;
-}
-
-canvas{
-background:#222;
-border:3px solid white;
-}
-
-#ui{
-margin-top:10px;
-}
-</style>
+    <title>Magical Drop Puzzle</title>
+    <style>
+        body { background: #fff0f5; display: flex; flex-direction: column; align-items: center; font-family: 'Arial', sans-serif; }
+        h1 { color: #ff69b4; text-shadow: 2px 2px #fff; }
+        canvas { border: 5px solid #ffb6c1; background: #fafafa; border-radius: 10px; box-shadow: 0 0 20px rgba(255,182,193,0.5); }
+    </style>
 </head>
-
 <body>
-
-<h1>勇者の大冒険<br>～失われた世界～</h1>
-
-<div id="start">
-
-<p>勇者の名前を入力してください</p>
-
-<input id="nameInput">
-<button onclick="startGame()">冒険を始める</button>
-
-</div>
-
-<canvas id="game" width="800" height="500" style="display:none"></canvas>
-
-<div id="ui"></div>
-
-<script>
-
-const canvas=document.getElementById("game")
-const ctx=canvas.getContext("2d")
-const ui=document.getElementById("ui")
-
-let heroName="勇者"
-
-function startGame(){
-
-heroName=document.getElementById("nameInput").value
-
-if(heroName=="") heroName="勇者"
-
-document.getElementById("start").style.display="none"
-canvas.style.display="block"
-
-state="village"
-
-}
-
-let state="title"
-
-let player={
-x:380,
-y:250,
-hp:60,
-atk:10,
-level:1
-}
-
-let party=[heroName]
-
-let enemy=null
-
-let villagers=[
-{x:200,y:200,text:"魔王ヴォルカが世界を支配してしまった…"},
-{x:500,y:220,text:"森には宝箱があるらしいぞ"}
-]
-
-let chest={
-x:400,
-y:350,
-opened:false
-}
-
-document.addEventListener("keydown",key)
-
-function key(e){
-
-if(state=="village"){
-
-if(e.key=="ArrowUp")player.y-=20
-if(e.key=="ArrowDown")player.y+=20
-if(e.key=="ArrowLeft")player.x-=20
-if(e.key=="ArrowRight")player.x+=20
-
-if(e.key==" "){
-
-talk()
-
-openChest()
-
-}
-
-}
-
-if(state=="forest"){
-
-if(Math.random()<0.2){
-
-startBattle()
-
-}
-
-}
-
-if(state=="battle"){
-
-if(e.key=="1")attack()
-if(e.key=="2")magic()
-
-}
-
-}
-
-function talk(){
-
-for(let v of villagers){
-
-if(Math.abs(player.x-v.x)<60 && Math.abs(player.y-v.y)<60){
-
-ui.innerText=v.text
-return
-
-}
-
-}
-
-}
-
-function openChest(){
-
-if(!chest.opened &&
-Math.abs(player.x-chest.x)<50 &&
-Math.abs(player.y-chest.y)<50){
-
-chest.opened=true
-
-ui.innerText="宝箱を開けた！ポーションを手に入れた！"
-
-}
-
-}
-
-function startBattle(){
-
-state="battle"
-
-let r=Math.random()
-
-if(r<0.25) enemy={name:"スライム",hp:20,atk:4}
-else if(r<0.5) enemy={name:"鬼",hp:30,atk:6}
-else if(r<0.75) enemy={name:"雷鬼",hp:35,atk:7}
-else enemy={name:"ミニドラゴン",hp:45,atk:9}
-
-ui.innerText=enemy.name+" が現れた！"
-
-}
-
-function attack(){
-
-let dmg=player.atk+Math.floor(Math.random()*6)
-
-enemy.hp-=dmg
-
-ui.innerText=heroName+" の攻撃！ "+dmg+"ダメージ！"
-
-enemyTurn()
-
-}
-
-function magic(){
-
-let dmg=15+Math.floor(Math.random()*8)
-
-enemy.hp-=dmg
-
-ui.innerText="ファイア！ "+dmg+"ダメージ！"
-
-enemyTurn()
-
-}
-
-function enemyTurn(){
-
-if(enemy.hp<=0){
-
-ui.innerText=enemy.name+" を倒した！"
-
-if(party.length<3 && Math.random()<0.4){
-
-party.push(enemy.name)
-
-ui.innerText+=" "+enemy.name+" が仲間になった！"
-
-}
-
-state="village"
-return
-
-}
-
-let dmg=enemy.atk+Math.floor(Math.random()*5)
-
-player.hp-=dmg
-
-ui.innerText=enemy.name+" の攻撃！ "+dmg+"ダメージ"
-
-if(player.hp<=0){
-
-state="gameover"
-
-}
-
-}
-
-function drawVillage(){
-
-ctx.fillStyle="green"
-ctx.fillRect(0,0,800,500)
-
-ctx.fillStyle="white"
-ctx.fillText("始まりの村",20,20)
-
-ctx.fillStyle="blue"
-ctx.fillRect(player.x,player.y,40,40)
-
-ctx.fillStyle="yellow"
-
-for(let v of villagers){
-
-ctx.fillRect(v.x,v.y,40,40)
-
-}
-
-ctx.fillStyle="orange"
-
-if(!chest.opened){
-
-ctx.fillRect(chest.x,chest.y,40,40)
-
-}
-
-}
-
-function drawBattle(){
-
-ctx.fillStyle="black"
-ctx.fillRect(0,0,800,500)
-
-ctx.fillStyle="white"
-
-ctx.font="25px sans-serif"
-
-ctx.fillText(enemy.name+" が現れた！",300,100)
-
-ctx.fillText("敵HP: "+enemy.hp,350,200)
-
-ctx.fillText("1 攻撃",300,350)
-ctx.fillText("2 魔法",420,350)
-
-ctx.fillText(heroName+" HP:"+player.hp,20,20)
-
-}
-
-function drawGameOver(){
-
-ctx.fillStyle="black"
-ctx.fillRect(0,0,800,500)
-
-ctx.fillStyle="red"
-
-ctx.font="50px sans-serif"
-
-ctx.fillText("GAME OVER",260,250)
-
-}
-
-function loop(){
-
-ctx.clearRect(0,0,800,500)
-
-if(state=="village") drawVillage()
-if(state=="battle") drawBattle()
-if(state=="gameover") drawGameOver()
-
-requestAnimationFrame(loop)
-
-}
-
-loop()
-
-</script>
-
+    <h1>🎀 Magical Jewel 🎀</h1>
+    <canvas id="gameCanvas" width="240" height="480"></canvas>
+    <p>【← →】移動 【↓】加速 【Z】回転</p>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const ROWS = 12;
+        const COLS = 6;
+        const SIZE = 40;
+        const COLORS = [null, '#ff99cc', '#99ccff', '#ccff99', '#ffff99']; // 宝石の色
+
+        // 盤面の初期化
+        let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+
+        // 現在操作中のドロップ（2個1組）
+        let player = {
+            x: 2, y: 0,
+            cells: [Math.floor(Math.random() * 4) + 1, Math.floor(Math.random() * 4) + 1],
+            dir: 0 // 0:上, 1:右, 2:下, 3:左
+        };
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 盤面の描画
+            for(let r=0; r<ROWS; r++) {
+                for(let c=0; c<COLS; c++) {
+                    if(board[r][c]) drawGem(c, r, board[r][c]);
+                }
+            }
+
+            // 操作中のドロップ描画
+            drawGem(player.x, player.y, player.cells[0]);
+            let subX = player.x + (player.dir === 1 ? 1 : player.dir === 3 ? -1 : 0);
+            let subY = player.y + (player.dir === 2 ? 1 : player.dir === 0 ? -1 : 0);
+            drawGem(subX, subY, player.cells[1]);
+        }
+
+        function drawGem(x, y, colorIdx) {
+            ctx.fillStyle = COLORS[colorIdx];
+            ctx.beginPath();
+            ctx.arc(x*SIZE + SIZE/2, y*SIZE + SIZE/2, SIZE/2 - 2, 0, Math.PI*2);
+            ctx.fill();
+            // ハイライト（キラキラ感）
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.beginPath();
+            ctx.arc(x*SIZE + SIZE/3, y*SIZE + SIZE/3, SIZE/6, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // 簡易的な落下処理
+        function drop() {
+            player.y++;
+            if (player.y >= ROWS || board[player.y][player.x]) {
+                // ここに設置判定と連鎖判定を入れる（今回は基本移動のみ）
+                player.y = 0;
+            }
+            draw();
+        }
+
+        setInterval(drop, 1000); // 1秒ごとに落下
+        draw();
+    </script>
 </body>
 </html>
